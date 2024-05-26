@@ -1,0 +1,118 @@
+Introdução
+Neste exercício vamos praticar o desenvolvimento de aplicações baseadas em chamadas de procedimento remotos (RPC). Na área de desenvolvimento de aplicações em nuvem, RPCs são provavelmente a técnica mais utilizada hoje para comunicação entre partes de um serviço em rede. Mesmo quando a comunicação se dá por sistemas de filas de mensagens, normalmente a interface de programação é construída sobre RPCs. Muitas vezes, diversos serviços baseados em RPC são interligados entre si formando serviços mais complexos, como neste caso, onde vamos interligar dois tipos de servidores.
+
+Entre os frameworks de programação com RPC existem diversas opções. Neste exercício usaremos gRPC, por ser das opções populares que não estão presas a ambiente de desenvolvimento específicos (como Flask ou node.js, por exemplo).
+
+Objetivo
+Neste exercício você deve desenvolver, usando gRPC, um serviço simples de diretório de dados e compor um ou mais servidores desse tipo com um servidor integrador para construir um serviço mais elaborado. Dessa forma, a implementação pode ser dividida em duas partes: o serviço de diretórios local e o serviço integrado.
+
+Primeira parte: um servidor de diretórios independente
+Primeiramente, seu objetivo é criar um par cliente/servidor que se comunique por gRPC para criar um serviço de diretórios simples, do tipo chave/valores, onde cada chave será associada a um string e um número de ponto flutuante.
+
+Seu servidor deve exportar o seguintes procedimentos:
+
+inserção: recebe como parâmetros um inteiro positivo (chave), um string (desc) e um número de ponto flutuante (valor) e armazena desc e valor em um dicionário, associados à chave, caso ela ainda não exista, retorna zero; caso a chave já existia o conteúdo (desc e valor) devem ser atualizados e o valor 1 deve ser retornado;
+consulta: recebe como parâmetros um inteiro positivo (chave) e retorna o conteúdo do string e valor associados à chave, caso ela exista, ou um string nulo e o valor zero caso contrário;
+registro: recebe como parâmetro um string com o nome de uma máquina e um inteiro identificando um porto naquela máquina. Esse comando só faz sentido para utilizar o serviço que será definido na segunda parte. Ao ser executado, o servidor deve se conectar como cliente de um servido de integração localizado na máquina/porto passados como parâmetros e disparar o procedimento de registro daquele servidor (descrito na segunda parte); ao final, deve retornar para o cliente o valor retornado pelo outro servidor;
+término: um procedimento sem parâmetros que indica que o servidor deve terminar sua execução; nesse caso o servidor deve responder com um inteiro igual ao número de chaves armazenadas até então e terminar sua execução depois da resposta.
+O programa servidor deve receber um parâmetro de linha de comando com o número do porto a ser usado por ele. Nenhuma mensagem deve ser escrita na saída padrão durante sua execução normal (mensagens de erro, obviamente, são uma exceção).
+
+O programa cliente deve receber como parâmetro um string com o nome ou endereço IP da máquina onde o servidor executa e o número do porto, separados por ":" (p.ex., "localhost:5555" ou "cristal.dcc.ufmg.br:6789"). 
+
+O cliente deve ler comandos da entrada padrão, segundo a seguinte forma (os programas devem poder funcionar com a entrada redirecionada para um arquivo):
+
+I,ch,um string de descrição,val - insere no servidor a chave ch, associada ao string e ao valor val, escreve na saída padrão o valor de retorno do procedimento (0 ou 1);
+C,ch - consulta o servidor pelo conteúdo associado à chave ch e escreve na saída o string e o valor, separados por uma vírgula, ou apenas -1, caso a chave não seja encontrada;
+R,nome,porto - dispara o procedimento de registro no servidor de diretórios independente, identificando o nome e o porto onde o servidor de integração se encontra. O cliente deve escrever o valor de retorno recebido. Esse comando pode ser executado qualquer número de vezes, com identificadores de servidores possivelmente diferentes. Esse comando só faz sentido para usar a segunda parte.
+T - sinaliza a terminação do servidor, escreve o valor de retorno e termina o cliente.
+Qualquer outro conteúdo que não comece com I, C, R ou T deve ser simplesmente ignorado; nos comandos que usam vírgulas como separadores, o único lugar onde espaços são permitidos é dentro do string de descrição.
+
+Se o arquivo de entrada terminar sem o comando T apenas o cliente deve terminar, mantendo o servidor ativo.
+
+Para fins de avaliação, uma primeira bateria de testes envolverá apenas o cliente e servidores desta parte e usará apenas os comandos I, C, R e T. Isso permite atribuir pontos a trabalhos que falhem em integrar o primeiro servidor com o segundo.
+
+A ideia de dividir este enunciado em duas partes é para ajudar no processo de desenvolvimento: pode-se implementar primeiro apenas o cliente e o servidor da primeira parte, sem o comando de registro. Uma vez tendo uma versão operacional desse par cliente servidor, pode-se passar para a implementação do comando de registro e o par cliente-servidor da segunda parte.
+
+Segunda parte: um servidor que integra os diretórios
+No Napster original, cada participante mantinha sua lista de arquivos particular e se conectava ao servido central do Napster, informando a ele as chaves que identificavam cada arquivo contido no participante. O servidor central, por sua vez, armazenava apenas as chaves e um identificador do participante que informava cada uma. Esse tipo de operação de integração é muito comum em serviços em nuvem e vamos criar um pequeno caso de uso nesta parte.
+
+Seu objetivo final é implementar um serviço de consulta que integra as informações de um ou mais servidores de armazenamento. Ele recebe como parâmetro da linha de comando apenas o número do porto que deve utilizar para receber conexões; o restante da operação é controlada por RPCs.
+
+O servidor de integração nesse caso aceita apenas três comandos:
+
+registro: recebe como parâmetros o nome da máquina onde um servidor de diretórios independente está executando e um inteiro indicando o número do porto usado por ele, seguidos por uma lista com todas as chaves contidas naquele servidor (inteiros). Deve retornar o número de chaves recebidas ou zero, se seu código detectar algum erro (normalmente não seria necessário);
+consulta: recebe como parâmetro o inteiro positivo ch e consulta um diretório local para ver se conhece a chave indicada. Em caso afirmativo, retorna um string indicando o nome (ou endereço IP) do participante que contém aquela chave e um inteiro indicando o número do porto a ser usado para contactá-lo. Em caso negativo, retorna o string "ND" e um inteiro qualquer (p.ex., zero);
+término: um procedimento sem parâmetros que indica que o servidor deve terminar sua execução; nesse caso o servidor deve responder com um inteiro igual ao número de chaves registradas até então e terminar sua execução depois da resposta.
+O cliente é semelhante ao cliente da primeira parte: o programa  deve receber como parâmetro um string com o nome ou endereço IP da máquina onde o servidor de integração executa e o número do porto, separados por ":" (p.ex., "localhost:5555" ou "cristal.dcc.ufmg.br:6789"). 
+O cliente deve ler comandos da entrada padrão, segundo a seguinte forma (os programas devem poder funcionar com a entrada redirecionada para um arquivo):
+
+C,ch - consulta o servidor de integração pela chave ch, que deve responder com o identificador de um servidor de diretório independente. Se a resposta for "ND", esse string deve ser escrito na saída. Caso contrário, o cliente em seguida executa uma consulta àquele servidor indentificado na resposta e escreve na saída o valor de retorno.
+T - sinaliza a terminação do servidor, escreve o valor de retorno e termina o cliente.
+Qualquer outro conteúdo que não comece com C ou T deve ser simplesmente ignorado; o comando C usa uma vírgula como separador. Note que não há um comando R, pois este deve ser disparado a partir do cliente do servidor de diretórios independente.
+
+Requisitos não funcionais:
+O código deve usar apenas Python 3, sem bibliotecas além das consideradas padrão. Não serão aceitas outras bibliotecas, nem o uso de recursos como E/S assíncrona em Python. A ideia é que os programas sejam simples, mesmo. O código deve observar exatamente o formato de saída descrito, para garantir a correção automática. Programas que funcionem mas produzam saída fora do esperado serão penalizados.
+
+O material desenvolvido por você deve executar sem erros nas máquinas linux do laboratório de graduação. (Nelas, o comando para disparar o Python é python3). A correção será feita naquelas máquinas e programas que não executarem, não seguirem as determinações quanto a nomes, parâmetros de entrada e formato da saída, ou apresentarem erros durante a execução serão desconsiderados.
+
+Observações/lembretes
+O exercício é individual.
+Os clientes devem escrever na saída apenas os valores indicados no enunciado.
+Sempre que o valor de ponto flutuante tiver que ser escrito na saída, deve-ser usar o formato "%7.4f").
+Os servidores não devem escrever nada na saída. Se forem usadas mensagens de depuração durante o desenvolvimento, elas devem ser removidas na versão entregue.
+Os comandos nunca serão fornecidos com formato/parâmetros errados.
+Linhas que iniciem com letras que não definem comandos devem ser ignoradas.
+Nenhum caso de teste tentará acessar um servidor que tenha sido terminado anteriormente no mesmo teste - isto é, não é preciso testar se um servidor está ativo antes de tentar contactá-lo, nem se preocupar em lidar com erros desse tipo.
+Um servidor de diretórios independente pode se registrar em mais de um servidor de integração e um servidor de integração pode receber o registro de mais de um servidor de diretórios.
+O que deve ser entregue:
+Você deve entregar um arquivo .zip  incluindo todo o código desenvolvido por você, com um makefile como descrito a seguir. Considerando a simplicidade do sistema, um relatório final em PDF não é necessário, mas todo o código deve ser adequadamente comentado.
+
+Preste atenção nos prazos: entregas com atraso não serão aceitas.
+
+O makefile a ser entregue:
+Junto com o código deve ser entregue um makefile que inclua, pelo menos, as seguintes regras:
+
+clean - remove todos os arquivos intermediários, deixando apenas os arquivos produzidos por você para e entrega
+stubs - executa o compilado de stubs do gRPC (não é aceitável recompilar os stubs a cada execução)
+run_cli_dir - executa o programa cliente da primeira parte
+run_serv_dir - executa o programa servidor da primeira parte
+run_serv_int - executa o programa servidor da segunda parte
+run_cli_int - executa o programa cliente da segunda parte
+As regras do tipo "run_*" devem se certificar de disparar todas as regras intermediárias que podem ser necessárias para se obter um programa executável, como executar o compilador de stubs. Como trata-se de programas em Python, as regras run basicamente disparam o interpretador Python com os arquivos adequados.
+
+Para o make run funcionar, você deve considerar que os comandos serão executados da seguinte forma (possivelmente, em diferentes terminais):
+
+make run_serv_dir arg=5555
+make run_cli_dir arg=nome_de_uma_máquina:5555
+make run_serv_int arg=6666
+make run_cli_int arg=nome_de_alguma_máquina:6666
+
+
+Obviamente, o valor dos argumentos pode variar. Por exemplo, se o programa do cliente de diretórios tem o nome "cln_dir.py", a regra seria:
+
+run_cli_dir:
+     python3 cln_dir.py $(arg)
+Referências úteis
+Em um primeiro uso de gRPC, pode ser que vocês encontrem diversos pontos que vão exigir um pouco mais de atenção no estudo da documentação para conseguir fazer a implementação correta. Eu considero que os pontos que podem dar mais trabalho e que merecem algumas dicas são os seguintes:
+
+Como identificar a máquina em que um programa está executando
+Usualmente, cada máquina operando em rede deve ter um nome pelo qual ela pode ser identificada. Nesse exercício, o servidor de diretório que vai ser registrar com um servidor de integração deve enviar ao segundo o seu nome, como um dos parâmetros da RPC utilizada. Esse nome pode ser obtido pelo processo que executa o servidor de diretório usando a função getfqdn() (fpdn = fully qualified domain name, ou o nome completo da máquina no domínio de rede onde ela opera). Assim, antes de iniciar a chamada ao servidor da segunda parte, o servidor de diretório deve usar aquela função para obter seu nome, que será comunicado pela chamada ao procedimento de registro. Esse link ilustra como usar a função getfqdn().
+
+Manipulação de listas em uma chamada de procedimento
+Cada framework de RPC tem sua forma de lidar com isso. Em Sun RPC/XDR, listas eram representadas como vetores e deviam vir acompanhadas de um outro campo de parâmetro que indicaria quantas posições realmente seriam usadas no vetor. Em gRPC isso é relativamente mais simples, especialmente em Python: a definição do parâmetro usa a palavra chave repeated e ele é manipulado exatamente como uma lista. Esse link explica como a lista pode ser manipulada no cliente e no servidor (em Python).
+
+Desligar um servidor através de um RPC
+Como mencionado anteriormente, fazer um servidor de RPC parar de funcionar usando uma chamada de procedimento dele mesmo tem uma pegadinha: não basta chamar um exit() enquanto se executa o código do procedimento, ou ele vai terminar a execução antes de retornar da chamada, deixando o cliente sem resposta. E normalmente a gente só pode escrever código dentro das chamadas, já que não devemos alterar o código do stub. Cada framework de RPC tem uma solução diferente para esse problema e a solução do gRPC é bastante elegante, exigindo pouco código. Usa-se a geração de um evento dentro do código da RPC, que é capturado pelo servidor. Pode parecer complicado, mas o código para se fazer isso já está descrito no stackexchange.
+
+
+Dúvidas?
+Usem o fórum criado especialmente para esse exercício de programação para enviar suas dúvidas. Entretanto, não é permitido publicar código no fórum! Se você tem uma dúvida que envolve explicitamente um trecho de código, envie mensagem por e-mail diretamente para o professor.
+
+
+
+Certamente, o mundo é mais complicado...
+Como a carga horária da disciplina é limitada, como mencionado antes, este é um problema extremamente simplificado e certas práticas de desenvolvimento que são muito importantes no ambiente profissional estão sendo ignoradas/descartadas: seu código não precisa se preocupar com verificação de entradas incorretas, erros de operação, ações maliciosas. Não considerem que isso é um argumento contra essas práticas, mas em prol do foco principal da disciplina, em função do tempo disponível, temos que simplificar.
+
+Na sua vida profissional, tenham sempre em mente que testes exaustivos, programação defensiva (testar todos os tipos de entradas possíveis, etc.) e cuidados de segurança devem estar sempre entre suas preocupações durante qualquer desenvolvimento.
+
+

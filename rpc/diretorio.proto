@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package diretorio;
+
+service ServidorDiretorio {
+    rpc inserir_no_diretorio (InsercaoRequest) returns (RespostaInsercao);
+    rpc consultar_diretorio (ConsultaRequest) returns (RespostaConsulta);
+    rpc registrar_no_servidor (RegistroRequest) returns (RespostaIntegracao);
+    rpc terminar_execucao (TerminoRequest) returns (RespostaTermino);
+}
+
+message InsercaoRequest {
+    int32 chave = 1;
+    string descricao = 2;
+    float valor = 3;
+}
+
+message ConsultaRequest {
+    int32 chave = 1;
+}
+
+message RegistroRequest {
+    string nome_srv_int = 1;
+    int32 porto_srv_int = 2;
+}
+
+message TerminoRequest {}
+
+message RespostaInsercao{
+    int32 inseriu = 1;
+}
+
+message RespostaConsulta{
+    string desc = 1;
+    float valor = 2;
+    string existe = 3;
+}
+
+message RespostaIntegracao{
+    int32 num_chaves = 1;
+}
+
+message RespostaTermino{
+    int32 num_chaves = 1;
+}

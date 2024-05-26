@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package integracao;
+
+service ServidorIntegracao {
+    rpc registrar_servidor (RegistroIntegracaoRequest) returns (RespostaRegistroIntegracao);
+    rpc consultar_servidor (ConsultaIntegracaoRequest) returns (RespostaConsultaIntegracao);
+    rpc terminar_servidor_integrado (TerminoIntegracaoRequest) returns (RespostaTerminoIntegracao);
+}
+
+message RegistroIntegracaoRequest {
+    string nome_maquina = 1;
+    int32 porto = 2;
+    string chaves = 3;
+}
+
+message ConsultaIntegracaoRequest {
+    int32 chave = 1;
+}
+
+message TerminoIntegracaoRequest {}
+
+message RespostaRegistroIntegracao{
+    int32 num_chaves = 1;
+}
+
+message RespostaConsultaIntegracao {
+    string nome_maquina = 1;
+    int32 porto = 2;
+}
+
+message RespostaTerminoIntegracao {
+    int32 num_chaves = 1;
+}
